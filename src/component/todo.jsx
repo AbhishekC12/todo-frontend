@@ -6,19 +6,14 @@ export function ToDoApp() {
     const [appointments, setAppointments] = useState([]);
     const [toggleAdd, setToggleAdd] = useState({ display: 'block' });
     const [toggleEdit, setToggleEdit] = useState({ display: 'none' });
-    const [editAppoint, setEditAppointment] = useState({
-        Id: 0,
-        Title: '',
-        Date: '',
-        Description: ''
-    });
+    const [editAppoint, setEditAppointment] = useState({ Id: 0, Title: '', Date: '', Description: '' });
 
     const formik = useFormik({
         initialValues: {
             Id: 0,
             Title: '',
             Description: '',
-            Date: new Date()
+            Date: new Date().toISOString().substr(0, 10) // Initial date in YYYY-MM-DD format
         },
         onSubmit: (appointment) => {
             axios.post(`https://todo-backend-swkz.onrender.com/addtask`, appointment)
@@ -34,10 +29,10 @@ export function ToDoApp() {
 
     const editFormik = useFormik({
         initialValues: {
-            Id: editAppoint.Id,
-            Title: editAppoint.Title,
-            Date: editAppoint.Date.slice(0, editAppoint.Date.indexOf("T")),
-            Description: editAppoint.Description
+            Id: editAppoint.Id || 0, // Ensure Id is initialized properly
+            Title: editAppoint.Title || '',
+            Date: editAppoint.Date ? new Date(editAppoint.Date).toISOString().substr(0, 10) : new Date().toISOString().substr(0, 10), // Convert to YYYY-MM-DD format
+            Description: editAppoint.Description || ''
         },
         enableReinitialize: true,
         onSubmit: (appointment) => {
@@ -47,7 +42,7 @@ export function ToDoApp() {
                     window.location.reload();
                 })
                 .catch(error => {
-                    console.error('Error updating appointment:', error);
+                    console.error('Error modifying appointment:', error);
                 });
         }
     });
@@ -85,10 +80,11 @@ export function ToDoApp() {
         setToggleEdit({ display: 'block' });
         axios.get(`https://todo-backend-swkz.onrender.com/appointments/${id}`)
             .then(response => {
-                setEditAppointment(response.data);
+                setEditAppointment(response.data || { Id: 0, Title: '', Date: '', Description: '' });
             })
             .catch(error => {
                 console.error('Error fetching appointment for edit:', error);
+                setEditAppointment({ Id: 0, Title: '', Date: '', Description: '' }); // Set default values or handle error case
             });
     }
 
@@ -101,18 +97,18 @@ export function ToDoApp() {
         <div className="container-fluid">
             <h1 className="text-center">To Do App</h1>
             <header>
-                <div aria-label="AddAppointment" style={toggleAdd}>
+                <div aria-label="AddAppointment" style={toggleAdd} >
                     <label className="form-label fw-bold">Add New Appointment</label>
                     <div>
                         <form onSubmit={formik.handleSubmit} className="w-50">
                             <div className="d-flex">
-                                <input type="text" name="Id" value={formik.values.Id} className="form-control" onChange={formik.handleChange} />
+                                <input type="number" name="Id" value={formik.values.Id} className="form-control" onChange={formik.handleChange} />
                                 <input type="text" name="Title" onChange={formik.handleChange} className="form-control" placeholder="Title" />
-                                <input type="date" name="Date" onChange={formik.handleChange} className="form-control" />
+                                <input type="date" name="Date" onChange={formik.handleChange} className="form-control" value={formik.values.Date} />
                             </div>
                             <div className="mt-2">
                                 <label className="form-label fw-bold">Description</label>
-                                <textarea name="Description" onChange={formik.handleChange} className="form-control"></textarea>
+                                <textarea name="Description" onChange={formik.handleChange} className="form-control" value={formik.values.Description}></textarea>
                                 <div className="mt-3">
                                     <button className="btn btn-primary">Add</button>
                                 </div>
@@ -121,7 +117,7 @@ export function ToDoApp() {
                     </div>
                 </div>
 
-                <div aria-label="EditAppointment" style={toggleEdit}>
+                <div aria-label="EditAppointment" style={toggleEdit} >
                     <label className="form-label fw-bold">Edit Appointment</label>
                     <div>
                         <form onSubmit={editFormik.handleSubmit} className="w-50">
@@ -147,17 +143,19 @@ export function ToDoApp() {
                 <div>
                     <label className="form-label fw-bold">Your Appointments</label>
                     <div className="d-flex flex-wrap">
-                        {appointments.map(appointment =>
-                            <div className="alert alert-dismissible alert-success m-2 w-25" key={appointment.Id}>
-                                <button className="btn btn-close" value={appointment.Id} onClick={handleDeleteClick}></button>
-                                <div className="h5 alert-title">{appointment.Title}</div>
-                                <p>{appointment.Description}</p>
-                                <span className="bi bi-calendar"></span> {appointment.Date.slice(0, appointment.Date.indexOf("T"))}
-                                <div className="mt-3">
-                                    <button onClick={() => { handleEditClick(appointment.Id) }} className="bi bi-pen-fill btn btn-warning"> Edit </button>
+                        {
+                            appointments.map(appointment =>
+                                <div className="alert alert-dismissible alert-success m-2 w-25" key={appointment.Id}>
+                                    <button className="btn btn-close" value={appointment.Id} onClick={handleDeleteClick}></button>
+                                    <div className="h5 alert-title">{appointment.Title}</div>
+                                    <p>{appointment.Description}</p>
+                                    <span className="bi bi-calendar"></span> {appointment.Date ? new Date(appointment.Date).toLocaleDateString() : ''}
+                                    <div className="mt-3">
+                                        <button onClick={() => { handleEditClick(appointment.Id) }} className="bi bi-pen-fill btn btn-warning"> Edit </button>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        }
                     </div>
                 </div>
             </main>
